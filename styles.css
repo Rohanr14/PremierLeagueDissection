@@ -34,3 +34,28 @@ button {
 #scene-container {
     min-height: 400px;
 }
+
+svg {
+    display: block;
+    margin: auto;
+}
+  
+.line {
+    fill: none;
+    stroke: steelblue;
+    stroke-width: 2px;
+}
+  
+.annotation {
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.tooltip {
+    position: absolute;
+    background-color: white;
+    border: solid 1px #aaa;
+    border-radius: 5px;
+    padding: 10px;
+    pointer-events: none;
+}
