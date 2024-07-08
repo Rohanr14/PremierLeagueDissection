@@ -127,7 +127,7 @@ function processTopScorersData(data) {
         appearances: +d.Appearances,
         age: +d.Age,
         penalties: +d.Penaltys,
-        minutesPlayed: +d['Minutes Played'].replace(/,/g, ''),
+        minutesPlayed: +d['Minutes Played'].replace(/'/g, ''),
         minsPerGoal: +d['Mins per goal'].replace(/'/g, ''),
         goalsPerMatch: +d['Goals per match']
     }));
