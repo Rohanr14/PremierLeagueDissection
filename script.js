@@ -1,3 +1,71 @@
+// Gradient class definition
+class Gradient {
+    constructor() {
+        this.canvas = document.getElementById('gradient-canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.colors = [
+            { r: 0, g: 100, b: 255 },    // Light Blue
+            { r: 0, g: 255, b: 150 },    // Light Green
+            { r: 255, g: 100, b: 100 },  // Light Red
+            { r: 255, g: 200, b: 0 }     // Light Yellow
+        ];
+        this.step = 0;
+        this.colorIndices = [0, 1, 2, 3];
+    }
+
+    initGradient() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        this.updateGradient();
+        window.addEventListener('resize', () => {
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
+        });
+    }
+
+    updateGradient() {
+        const c0 = this.colors[this.colorIndices[0]];
+        const c1 = this.colors[this.colorIndices[1]];
+        const c2 = this.colors[this.colorIndices[2]];
+        const c3 = this.colors[this.colorIndices[3]];
+
+        const istep = 1 - this.step;
+        const r1 = Math.round(istep * c0.r + this.step * c1.r);
+        const g1 = Math.round(istep * c0.g + this.step * c1.g);
+        const b1 = Math.round(istep * c0.b + this.step * c1.b);
+        const color1 = `rgb(${r1},${g1},${b1})`;
+
+        const r2 = Math.round(istep * c2.r + this.step * c3.r);
+        const g2 = Math.round(istep * c2.g + this.step * c3.g);
+        const b2 = Math.round(istep * c2.b + this.step * c3.b);
+        const color2 = `rgb(${r2},${g2},${b2})`;
+
+        const gradient = this.ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
+        gradient.addColorStop(0, color1);
+        gradient.addColorStop(1, color2);
+
+        this.ctx.fillStyle = gradient;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        this.step += 0.0005;
+        if (this.step >= 1) {
+            this.step %= 1;
+            this.colorIndices[0] = this.colorIndices[1];
+            this.colorIndices[2] = this.colorIndices[3];
+            this.colorIndices[1] = (this.colorIndices[1] + Math.floor(1 + Math.random() * (this.colors.length - 1))) % this.colors.length;
+            this.colorIndices[3] = (this.colorIndices[3] + Math.floor(1 + Math.random() * (this.colors.length - 1))) % this.colors.length;
+        }
+
+        requestAnimationFrame(() => this.updateGradient());
+    }
+}
+
+// Initialize the gradient after the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', (event) => {
+    const gradient = new Gradient();
+    gradient.initGradient();
+});
+
 // Define the scenes
 const scenes = [
     { id: 'intro', title: 'Introduction: The Birth of the Premier League' },
@@ -70,20 +138,6 @@ d3.select('#next-btn').on('click', () => {
     }
 });
 
-// Load and process the data
-Promise.all([
-    d3.csv('https://raw.githubusercontent.com/Rohanr14/PremierLeagueDissection/main/premier-league-matches-92-23.csv'),
-    d3.csv('https://raw.githubusercontent.com/Rohanr14/PremierLeagueDissection/main/premier-league-standings-92-23.csv'),
-    d3.csv('https://raw.githubusercontent.com/Rohanr14/PremierLeagueDissection/main/premier-league-top5-scorers-92-23.csv')
-]).then(([matches, standings, topScorers]) => {
-    matchesData = processMatchesData(matches);
-    standingsData = processStandingsData(standings);
-    topScorersData = processTopScorersData(topScorers);
-    console.log('Data loaded and processed:', { matchesData, standingsData, topScorersData });
-    // Initialize the first scene after data is loaded
-    updateScene();
-}).catch(error => console.error('Error loading the data:', error));
-
 function processMatchesData(data) {
     return data.map(d => ({
         season: +d.Season_End_Year,
@@ -101,7 +155,7 @@ function processStandingsData(data) {
     return data.map(d => ({
         season: +d['Initial Year'],
         position: +d['League position'],
-        club: d.Club,
+        club: d['Club'],
         gamesPlayed: +d['Games Played'],
         wins: +d.Wins,
         draws: +d.Draws,
@@ -127,21 +181,36 @@ function processTopScorersData(data) {
         appearances: +d.Appearances,
         age: +d.Age,
         penalties: +d.Penaltys,
-        minutesPlayed: +d['Minutes Played'].replace(/'/g, ''),
-        minsPerGoal: +d['Mins per goal'].replace(/'/g, ''),
+        minutesPlayed: d['Minutes Played'] ? +d['Minutes Played'].replace(/[,']/g, '') : null,
+        minsPerGoal: d['Mins per goal'] ? +d['Mins per goal'].replace(/'/g, '') : null,
         goalsPerMatch: +d['Goals per match']
     }));
 }
+
+// Data loading and processing
+Promise.all([
+    d3.csv('premier-league-matches-92-23.csv'),
+    d3.csv('premier-league-standings-92-23.csv'),
+    d3.csv('premier-league-top5-scorers-92-23.csv')
+]).then(([matches, standings, topScorers]) => {
+    matchesData = processMatchesData(matches);
+    standingsData = processStandingsData(standings);
+    topScorersData = processTopScorersData(topScorers);
+    updateScene(); // Initialize the first scene after data is loaded
+}).catch(error => console.error('Error loading the data:', error));
 
 function renderIntroScene(container) {
     container.append('p').text('Welcome to the Evolution of the Premier League (1992-2023)');
     
     // Create a simple bar chart showing the number of teams per season
     const teamsPerSeason = d3.rollup(standingsData, v => v.length, d => d.season);
-    const chartData = Array.from(teamsPerSeason, ([season, count]) => ({season, count}))
+    let chartData = Array.from(teamsPerSeason, ([season, count]) => ({season, count}))
         .sort((a, b) => a.season - b.season);
 
-    const margin = {top: 20, right: 20, bottom: 30, left: 40};
+    // Filter out any anomalous data (e.g., seasons with more than 22 teams)
+    chartData = chartData.filter(d => d.count <= 23 && d.count >= 19);
+
+    const margin = {top: 20, right: 20, bottom: 70, left: 40};
     const width = 600 - margin.left - margin.right;
     const height = 400 - margin.top - margin.bottom;
 
@@ -168,7 +237,8 @@ function renderIntroScene(container) {
         .attr('x', d => x(d.season))
         .attr('width', x.bandwidth())
         .attr('y', d => y(d.count))
-        .attr('height', d => height - y(d.count));
+        .attr('height', d => height - y(d.count))
+        .attr('fill', 'steelblue');
 
     svg.append('g')
         .attr('transform', `translate(0,${height})`)
@@ -184,7 +254,7 @@ function renderIntroScene(container) {
 
     svg.append('text')
         .attr('x', width / 2)
-        .attr('y', height + margin.bottom)
+        .attr('y', height + margin.bottom - 10)
         .attr('text-anchor', 'middle')
         .text('Season');
 
@@ -195,6 +265,13 @@ function renderIntroScene(container) {
         .attr('dy', '1em')
         .style('text-anchor', 'middle')
         .text('Number of Teams');
+
+    // Add explanation text
+    container.append('p')
+        .html('This chart shows the number of teams participating in the Premier League each season. ' +
+              'The Premier League started with 22 teams in 1992 and, after a few years of variation, was reduced to 20 teams from the 1998-1999 season and remained stable since.')
+        .style('max-width', '600px')
+        .style('margin', '20px auto');
 }
 
 function renderGoalsScene(container) {
@@ -209,8 +286,8 @@ function renderGoalsScene(container) {
     const chartData = Array.from(goalsBySeasonAndMatch, ([season, avgGoals]) => ({season, avgGoals}))
         .sort((a, b) => a.season - b.season);
 
-    const margin = {top: 20, right: 20, bottom: 30, left: 40};
-    const width = 600 - margin.left - margin.right;
+    const margin = {top: 30, right: 100, bottom: 50, left: 60};
+    const width = 700 - margin.left - margin.right;
     const height = 400 - margin.top - margin.bottom;
 
     const svg = container.append('svg')
@@ -251,52 +328,72 @@ function renderGoalsScene(container) {
     // Add X axis label
     svg.append('text')
         .attr('x', width / 2)
-        .attr('y', height + margin.bottom)
+        .attr('y', height + margin.bottom - 10)
         .attr('text-anchor', 'middle')
         .text('Season');
 
     // Add Y axis label
     svg.append('text')
         .attr('transform', 'rotate(-90)')
-        .attr('y', 0 - margin.left)
+        .attr('y', 0 - margin.left + 10)
         .attr('x', 0 - (height / 2))
         .attr('dy', '1em')
         .style('text-anchor', 'middle')
         .text('Average Goals per Match');
 
     // Add annotation for highest scoring season
-    const highestScoringSeasonOld = chartData.reduce((a, b) => a.avgGoals > b.avgGoals ? a : b);
-    const highestScoringSeasonNew = chartData.slice(-5).reduce((a, b) => a.avgGoals > b.avgGoals ? a : b);
+    const highestScoringSeason = chartData.reduce((a, b) => a.avgGoals > b.avgGoals ? a : b);
+    const lowestScoringSeason = chartData.reduce((a, b) => a.avgGoals < b.avgGoals ? a : b);
 
-    // Annotation for highest scoring season overall
-    svg.append('circle')
-        .attr('cx', x(highestScoringSeasonOld.season))
-        .attr('cy', y(highestScoringSeasonOld.avgGoals))
-        .attr('r', 5)
-        .attr('fill', 'red');
+    function addAnnotation(data, color, text, yOffset) {
+        svg.append('circle')
+            .attr('cx', x(data.season))
+            .attr('cy', y(data.avgGoals))
+            .attr('r', 5)
+            .attr('fill', color);
 
-    svg.append('text')
-        .attr('x', x(highestScoringSeasonOld.season))
-        .attr('y', y(highestScoringSeasonOld.avgGoals) - 10)
-        .attr('text-anchor', 'middle')
-        .text(`Highest: ${highestScoringSeasonOld.season} (${highestScoringSeasonOld.avgGoals.toFixed(2)} goals)`);
+        svg.append('text')
+            .attr('x', x(data.season))
+            .attr('y', y(data.avgGoals) + yOffset)
+            .attr('text-anchor', 'middle')
+            .text(`${text}: ${data.season} (${data.avgGoals.toFixed(2)})`)
+            .attr('font-size', '12px');
+    }
 
-    // Annotation for highest scoring season in recent years
-    svg.append('circle')
-        .attr('cx', x(highestScoringSeasonNew.season))
-        .attr('cy', y(highestScoringSeasonNew.avgGoals))
-        .attr('r', 5)
-        .attr('fill', 'green');
+    addAnnotation(highestScoringSeason, 'red', 'Highest', -10);
+    addAnnotation(lowestScoringSeason, 'green', 'Lowest', 20);
 
-    svg.append('text')
-        .attr('x', x(highestScoringSeasonNew.season))
-        .attr('y', y(highestScoringSeasonNew.avgGoals) + 20)
-        .attr('text-anchor', 'middle')
-        .text(`Recent High: ${highestScoringSeasonNew.season} (${highestScoringSeasonNew.avgGoals.toFixed(2)} goals)`);
+    // Add tooltips
+    const tooltip = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
+
+    // Add dots for each data point
+    svg.selectAll('.dot')
+        .data(chartData)
+        .enter().append('circle')
+        .attr('class', 'dot')
+        .attr('cx', d => x(d.season))
+        .attr('cy', d => y(d.avgGoals))
+        .attr('r', 3)
+        .attr('fill', 'steelblue')
+        .on('mouseover', function(event, d) {
+            tooltip.transition()
+                .duration(200)
+                .style("opacity", .9);
+            tooltip.html(`Season: ${d.season}<br>Avg Goals: ${d.avgGoals.toFixed(2)}`)
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 28) + "px");
+        })
+        .on('mouseout', function(d) {
+            tooltip.transition()
+                .duration(500)
+                .style("opacity", 0);
+        });
 
     // Add explanation text
     container.append('p')
-        .text('This chart shows the average number of goals scored per match in each Premier League season. ' +
+        .html('This chart shows the average number of goals scored per match in each Premier League season. ' +
               'We can observe how goal-scoring trends have changed over time, with some seasons seeing higher ' +
               'average goal counts than others.')
         .style('max-width', '600px')
@@ -326,7 +423,7 @@ function renderHomeAwayScene(container) {
         awayWinPercentage: data.awayWinPercentage
     })).sort((a, b) => a.season - b.season);
 
-    const margin = {top: 20, right: 80, bottom: 30, left: 50};
+    const margin = {top: 30, right: 120, bottom: 50, left: 60};
     const width = 700 - margin.left - margin.right;
     const height = 400 - margin.top - margin.bottom;
 
@@ -356,14 +453,14 @@ function renderHomeAwayScene(container) {
     // Add X axis label
     svg.append('text')
         .attr('x', width / 2)
-        .attr('y', height + margin.bottom)
+        .attr('y', height + margin.bottom - 10)
         .attr('text-anchor', 'middle')
         .text('Season');
 
     // Add Y axis label
     svg.append('text')
         .attr('transform', 'rotate(-90)')
-        .attr('y', 0 - margin.left)
+        .attr('y', 0 - margin.left + 10)
         .attr('x', 0 - (height / 2))
         .attr('dy', '1em')
         .style('text-anchor', 'middle')
@@ -394,10 +491,13 @@ function renderHomeAwayScene(container) {
         .attr('d', awayLine);
 
     // Add legend
-    svg.append('circle').attr('cx', width + 20).attr('cy', 20).attr('r', 6).style('fill', 'blue');
-    svg.append('circle').attr('cx', width + 20).attr('cy', 50).attr('r', 6).style('fill', 'red');
-    svg.append('text').attr('x', width + 30).attr('y', 20).text('Home Win %').style('font-size', '15px').attr('alignment-baseline', 'middle');
-    svg.append('text').attr('x', width + 30).attr('y', 50).text('Away Win %').style('font-size', '15px').attr('alignment-baseline', 'middle');
+    const legend = svg.append('g')
+        .attr('transform', `translate(${width - 100}, 0)`);
+
+    legend.append('circle').attr('cx', 0).attr('cy', 6).attr('r', 6).style('fill', 'blue');
+    legend.append('circle').attr('cx', 0).attr('cy', 30).attr('r', 6).style('fill', 'red');
+    legend.append('text').attr('x', 10).attr('y', 10).text('Home Win %').style('font-size', '12px').attr('alignment-baseline', 'middle');
+    legend.append('text').attr('x', 10).attr('y', 34).text('Away Win %').style('font-size', '12px').attr('alignment-baseline', 'middle');
 
     // Add annotation for smallest gap between home and away win percentages
     const smallestGap = chartData.reduce((min, d) => {
@@ -414,15 +514,65 @@ function renderHomeAwayScene(container) {
         .attr('fill', 'green');
 
     svg.append('text')
-        .attr('x', x(smallestGapData.season))
-        .attr('y', y((smallestGapData.homeWinPercentage + smallestGapData.awayWinPercentage) / 2) - 10)
+        .attr('x', x(smallestGapData.season) + 65)
+        .attr('y', y((smallestGapData.homeWinPercentage + smallestGapData.awayWinPercentage) / 2) + 5)
         .attr('text-anchor', 'middle')
         .text(`Smallest gap: ${smallestGapData.season}`)
         .attr('font-size', '12px');
 
+    // Add tooltips
+    const tooltip = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
+
+    // Add dots for each data point
+    svg.selectAll('.dot-home')
+        .data(chartData)
+        .enter().append('circle')
+        .attr('class', 'dot-home')
+        .attr('cx', d => x(d.season))
+        .attr('cy', d => y(d.homeWinPercentage))
+        .attr('r', 3)
+        .attr('fill', 'blue')
+        .on('mouseover', function(event, d) {
+            tooltip.transition()
+                .duration(200)
+                .style("opacity", .9);
+            tooltip.html(`Season: ${d.season}<br>Home Win %: ${d.homeWinPercentage.toFixed(2)}`)
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 28) + "px");
+        })
+        .on('mouseout', function(d) {
+            tooltip.transition()
+                .duration(500)
+                .style("opacity", 0);
+        });
+
+    svg.selectAll('.dot-away')
+        .data(chartData)
+        .enter().append('circle')
+        .attr('class', 'dot-away')
+        .attr('cx', d => x(d.season))
+        .attr('cy', d => y(d.awayWinPercentage))
+        .attr('r', 3)
+        .attr('fill', 'red')
+        .on('mouseover', function(event, d) {
+            tooltip.transition()
+                .duration(200)
+                .style("opacity", .9);
+            tooltip.html(`Season: ${d.season}<br>Away Win %: ${d.awayWinPercentage.toFixed(2)}`)
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 28) + "px");
+        })
+        .on('mouseout', function(d) {
+            tooltip.transition()
+                .duration(500)
+                .style("opacity", 0);
+        });
+
     // Add explanation text
     container.append('p')
-        .text('This chart shows the changing dynamics of home advantage in the Premier League. ' +
+        .html('This chart shows the changing dynamics of home advantage in the Premier League. ' +
               'The blue line represents the percentage of home wins, while the red line shows away wins. ' +
               'We can observe how the gap between home and away performance has changed over time, ' +
               'with the smallest gap occurring in the highlighted season.')
@@ -439,11 +589,12 @@ function renderCompetitiveBalanceScene(container) {
         d => d.season
     );
 
-    const chartData = Array.from(pointsStdDev, ([season, stdDev]) => ({season, stdDev}))
-        .sort((a, b) => a.season - b.season);
+    let chartData = Array.from(pointsStdDev, ([season, stdDev]) => ({season, stdDev}))
+        .sort((a, b) => a.season - b.season)
+        .filter(d => d.season !== 0 && d.stdDev !== 0); // Filter out invalid data points
 
-    const margin = {top: 20, right: 30, bottom: 30, left: 50};
-    const width = 600 - margin.left - margin.right;
+    const margin = {top: 30, right: 50, bottom: 50, left: 60};
+    const width = 700 - margin.left - margin.right;
     const height = 400 - margin.top - margin.bottom;
 
     const svg = container.append('svg')
@@ -463,7 +614,7 @@ function renderCompetitiveBalanceScene(container) {
     // Add the X Axis
     svg.append('g')
         .attr('transform', `translate(0,${height})`)
-        .call(d3.axisBottom(x).tickFormat(d3.format('d')));
+        .call(d3.axisBottom(x).tickFormat(d3.format('d')).ticks(10));
 
     // Add the Y Axis
     svg.append('g')
@@ -472,7 +623,7 @@ function renderCompetitiveBalanceScene(container) {
     // Add X axis label
     svg.append('text')
         .attr('x', width / 2)
-        .attr('y', height + margin.bottom)
+        .attr('y', height + margin.bottom - 10)
         .attr('text-anchor', 'middle')
         .text('Season');
 
@@ -497,6 +648,16 @@ function renderCompetitiveBalanceScene(container) {
         .attr('stroke-width', 1.5)
         .attr('d', line);
 
+    // Add dots for each data point
+    svg.selectAll('.dot')
+        .data(chartData)
+        .enter().append('circle')
+        .attr('class', 'dot')
+        .attr('cx', d => x(d.season))
+        .attr('cy', d => y(d.stdDev))
+        .attr('r', 3)
+        .attr('fill', 'steelblue');
+
     // Add annotation for the season with the lowest standard deviation (most competitive)
     const mostCompetitiveSeason = chartData.reduce((a, b) => a.stdDev < b.stdDev ? a : b);
 
@@ -507,10 +668,10 @@ function renderCompetitiveBalanceScene(container) {
         .attr('fill', 'red');
 
     svg.append('text')
-        .attr('x', x(mostCompetitiveSeason.season))
-        .attr('y', y(mostCompetitiveSeason.stdDev) - 10)
+        .attr('x', x(mostCompetitiveSeason.season) + 85)
+        .attr('y', y(mostCompetitiveSeason.stdDev) + 15)
         .attr('text-anchor', 'middle')
-        .text(`Most competitive: ${mostCompetitiveSeason.season}`)
+        .text(`Most competitive: ${mostCompetitiveSeason.season} (${mostCompetitiveSeason.stdDev.toFixed(2)})`)
         .attr('font-size', '12px');
 
     // Add annotation for the season with the highest standard deviation (least competitive)
@@ -524,10 +685,30 @@ function renderCompetitiveBalanceScene(container) {
 
     svg.append('text')
         .attr('x', x(leastCompetitiveSeason.season))
-        .attr('y', y(leastCompetitiveSeason.stdDev) + 20)
+        .attr('y', y(leastCompetitiveSeason.stdDev) - 10)
         .attr('text-anchor', 'middle')
-        .text(`Least competitive: ${leastCompetitiveSeason.season}`)
+        .text(`Least competitive: ${leastCompetitiveSeason.season} (${leastCompetitiveSeason.stdDev.toFixed(2)})`)
         .attr('font-size', '12px');
+
+    // Add tooltips
+    const tooltip = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
+
+    svg.selectAll('.dot')
+        .on('mouseover', function(event, d) {
+            tooltip.transition()
+                .duration(200)
+                .style("opacity", .9);
+            tooltip.html(`Season: ${d.season}<br>Std Dev: ${d.stdDev.toFixed(2)}`)
+                .style("left", (event.pageX) + "px")
+                .style("top", (event.pageY - 28) + "px");
+        })
+        .on('mouseout', function(d) {
+            tooltip.transition()
+                .duration(500)
+                .style("opacity", 0);
+        });
 
     // Add explanation text
     container.append('p')
@@ -544,18 +725,22 @@ function renderCompetitiveBalanceScene(container) {
 function renderPlayerImpactScene(container) {
     container.append('h3').text('Player Impact: Goals and Assists');
     
-    // Process data to get top 10 goal scorers of all time
-    const topScorers = d3.rollup(topScorersData, 
-        v => d3.sum(v, d => d.goals),
+    // Process data to get top 10 players by combined goals and assists
+    const playerImpact = d3.rollup(topScorersData, 
+        v => ({
+            goals: d3.sum(v, d => d.goals),
+            assists: d3.sum(v, d => d.assists),
+            total: d3.sum(v, d => d.goals + d.assists)
+        }),
         d => d.name
     );
 
-    const top10Scorers = Array.from(topScorers, ([name, goals]) => ({name, goals}))
-        .sort((a, b) => b.goals - a.goals)
+    const top10Players = Array.from(playerImpact, ([name, stats]) => ({name, ...stats}))
+        .sort((a, b) => b.total - a.total)
         .slice(0, 10);
 
-    const margin = {top: 20, right: 30, bottom: 70, left: 60};
-    const width = 600 - margin.left - margin.right;
+    const margin = {top: 30, right: 30, bottom: 100, left: 60};
+    const width = 700 - margin.left - margin.right;
     const height = 400 - margin.top - margin.bottom;
 
     const svg = container.append('svg')
@@ -571,8 +756,8 @@ function renderPlayerImpactScene(container) {
     const y = d3.scaleLinear()
         .range([height, 0]);
 
-    x.domain(top10Scorers.map(d => d.name));
-    y.domain([0, d3.max(top10Scorers, d => d.goals)]);
+    x.domain(top10Players.map(d => d.name));
+    y.domain([0, d3.max(top10Players, d => d.total)]);
 
     // Add the X Axis
     svg.append('g')
@@ -580,7 +765,9 @@ function renderPlayerImpactScene(container) {
         .call(d3.axisBottom(x))
         .selectAll('text')
         .attr('transform', 'rotate(-45)')
-        .style('text-anchor', 'end');
+        .style('text-anchor', 'end')
+        .attr('dx', '-.8em')
+        .attr('dy', '.15em');
 
     // Add the Y Axis
     svg.append('g')
@@ -589,106 +776,140 @@ function renderPlayerImpactScene(container) {
     // Add X axis label
     svg.append('text')
         .attr('x', width / 2)
-        .attr('y', height + margin.bottom - 5)
+        .attr('y', height + margin.bottom - 10)
         .attr('text-anchor', 'middle')
         .text('Player');
 
     // Add Y axis label
     svg.append('text')
         .attr('transform', 'rotate(-90)')
-        .attr('y', 0 - margin.left)
+        .attr('y', 0 - margin.left + 10)
         .attr('x', 0 - (height / 2))
         .attr('dy', '1em')
         .style('text-anchor', 'middle')
-        .text('Total Goals');
+        .text('Total Impact (Goals + Assists)');
 
-    // Add bars
-    svg.selectAll('.bar')
-        .data(top10Scorers)
-        .enter().append('rect')
-        .attr('class', 'bar')
-        .attr('x', d => x(d.name))
-        .attr('width', x.bandwidth())
-        .attr('y', d => y(d.goals))
-        .attr('height', d => height - y(d.goals))
-        .attr('fill', 'steelblue');
+    // Add stacked bars
+    const subgroups = ['goals', 'assists'];
+    const color = d3.scaleOrdinal()
+        .domain(subgroups)
+        .range(['#1f77b4', '#ff7f0e']);
+
+    const stackedData = d3.stack()
+        .keys(subgroups)(top10Players);
+
+    svg.append("g")
+      .selectAll("g")
+      .data(stackedData)
+      .enter().append("g")
+        .attr("fill", d => color(d.key))
+        .selectAll("rect")
+        .data(d => d)
+        .enter().append("rect")
+          .attr("x", d => x(d.data.name))
+          .attr("y", d => y(d[1]))
+          .attr("height", d => y(d[0]) - y(d[1]))
+          .attr("width", x.bandwidth());
 
     // Add value labels on top of bars
     svg.selectAll('.label')
-        .data(top10Scorers)
+        .data(top10Players)
         .enter().append('text')
         .attr('class', 'label')
         .attr('x', d => x(d.name) + x.bandwidth() / 2)
-        .attr('y', d => y(d.goals) - 5)
+        .attr('y', d => y(d.total) - 5)
         .attr('text-anchor', 'middle')
-        .text(d => d.goals);
+        .text(d => d.total);
+
+    // Add legend
+    const legend = svg.append("g")
+        .attr("font-family", "sans-serif")
+        .attr("font-size", 10)
+        .attr("text-anchor", "end")
+        .selectAll("g")
+        .data(subgroups.slice().reverse())
+        .enter().append("g")
+        .attr("transform", (d, i) => `translate(0,${i * 20})`);
+
+    legend.append("rect")
+        .attr("x", width - 19)
+        .attr("width", 19)
+        .attr("height", 19)
+        .attr("fill", color);
+
+    legend.append("text")
+        .attr("x", width - 24)
+        .attr("y", 9.5)
+        .attr("dy", "0.32em")
+        .text(d => d.charAt(0).toUpperCase() + d.slice(1));
+
+    // Add tooltips
+    const tooltip = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
+
+    svg.selectAll("rect")
+        .on('mouseover', function(event, d) {
+            const playerData = d.data;
+            tooltip.transition()
+                .duration(200)
+                .style("opacity", .9);
+            tooltip.html(`
+                <strong>${playerData.name}</strong><br>
+                Total Impact: ${playerData.total}<br>
+                Goals: ${playerData.goals}<br>
+                Assists: ${playerData.assists}
+            `)
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 28) + "px");
+        })
+        .on('mouseout', function(d) {
+            tooltip.transition()
+                .duration(500)
+                .style("opacity", 0);
+        });
 
     // Add explanation text
     container.append('p')
-        .html('This chart shows the top 10 goal scorers in Premier League history. ' +
+        .html('This chart shows the top 10 players in Premier League history based on their combined goals and assists. ' +
               'These players have had a significant impact on the league, consistently performing at the highest level. ' +
-              'Their goal-scoring prowess has not only helped their teams but also entertained millions of fans worldwide. <br><br>' +
-              'It\'s worth noting that this data spans the entire history of the Premier League, so it favors players with longer careers in the league. ' +
-              'Some recent stars might not appear here if they haven\'t played in the Premier League for many seasons.')
+              'Their goal-scoring prowess and ability to create chances for teammates have not only helped their teams but also entertained millions of fans worldwide. <br><br>' +
+              'It\'s worth noting that this data spans the entire history of the Premier League, so it ' +
+              'favors players with longer careers in the league. Some recent stars might not appear ' +
+              'here if they haven\'t played in the Premier League for many seasons.')
         .style('max-width', '600px')
         .style('margin', '20px auto');
-
-    // Add an interactive element: Clicking on a bar shows more details about the player
-    svg.selectAll('.bar')
-        .on('click', function(event, d) {
-            const playerData = topScorersData.filter(p => p.name === d.name);
-            const playerInfo = playerData[playerData.length - 1]; // Get the most recent entry
-
-            const infoBox = container.append('div')
-                .attr('class', 'player-info')
-                .style('position', 'absolute')
-                .style('background', 'white')
-                .style('border', '1px solid black')
-                .style('padding', '10px')
-                .style('top', `${event.pageY}px`)
-                .style('left', `${event.pageX}px`);
-
-            infoBox.html(`
-                <h4>${d.name}</h4>
-                <p>Total Goals: ${d.goals}</p>
-                <p>Last Team: ${playerInfo.team}</p>
-                <p>Last Season: ${playerInfo.season}</p>
-                <p>Goals in Last Season: ${playerInfo.goals}</p>
-                <p>Assists in Last Season: ${playerInfo.assists}</p>
-                <small>Click anywhere to close</small>
-            `);
-
-            // Close the info box when clicking anywhere
-            d3.select('body').on('click', () => {
-                infoBox.remove();
-                d3.select('body').on('click', null);
-            });
-
-            event.stopPropagation();
-        });
 }
 
 function renderChangingPaceScene(container) {
-    container.append('h3').text('The Changing Pace of the Game');
+    container.append('h3').text('The Evolution of Competitiveness: Points Gap Analysis');
     
-    // Calculate average fouls, yellow cards, and red cards per match for each season
-    const paceData = d3.rollup(matchesData, 
-        v => ({
-            avgFouls: d3.mean(v, d => d.fouls),
-            avgYellowCards: d3.mean(v, d => d.yellowCards),
-            avgRedCards: d3.mean(v, d => d.redCards)
-        }),
+    // Process data to get point gaps for each season
+    const pointGaps = d3.rollup(standingsData, 
+        v => {
+            const sortedPositions = v.sort((a, b) => a.position - b.position);
+            const first = sortedPositions.find(d => d.position === 1);
+            const fourth = sortedPositions.find(d => d.position === 4);
+            const fifth = sortedPositions.find(d => d.position === 5);
+            const seventeenth = sortedPositions.find(d => d.position === 17);
+            const eighteenth = sortedPositions.find(d => d.position === 18);
+            
+            return {
+                topFourGap: first && fourth ? first.points - fourth.points : null,
+                championsLeagueCutoff: fourth && fifth ? fourth.points - fifth.points : null,
+                relegationBattle: seventeenth && eighteenth ? seventeenth.points - eighteenth.points : null
+            };
+        },
         d => d.season
     );
 
-    const chartData = Array.from(paceData, ([season, data]) => ({
-        season,
-        avgFouls: data.avgFouls,
-        avgYellowCards: data.avgYellowCards,
-        avgRedCards: data.avgRedCards
-    })).sort((a, b) => a.season - b.season);
+    const chartData = Array.from(pointGaps, ([season, gaps]) => ({season, ...gaps}))
+        .sort((a, b) => a.season - b.season)
+        .filter(d => d.season >= 1992 && d.season <= 2023);
 
-    const margin = {top: 20, right: 80, bottom: 30, left: 50};
+    console.log('Points Gap Data:', chartData);
+
+    const margin = {top: 30, right: 150, bottom: 50, left: 60};
     const width = 700 - margin.left - margin.right;
     const height = 400 - margin.top - margin.bottom;
 
@@ -703,7 +924,7 @@ function renderChangingPaceScene(container) {
         .range([0, width]);
 
     const y = d3.scaleLinear()
-        .domain([0, d3.max(chartData, d => Math.max(d.avgFouls, d.avgYellowCards * 10, d.avgRedCards * 100))])
+        .domain([0, d3.max(chartData, d => Math.max(d.topFourGap, d.championsLeagueCutoff, d.relegationBattle))])
         .range([height, 0]);
 
     // Add the X Axis
@@ -718,111 +939,145 @@ function renderChangingPaceScene(container) {
     // Add X axis label
     svg.append('text')
         .attr('x', width / 2)
-        .attr('y', height + margin.bottom)
+        .attr('y', height + margin.bottom - 10)
         .attr('text-anchor', 'middle')
         .text('Season');
 
     // Add Y axis label
     svg.append('text')
         .attr('transform', 'rotate(-90)')
-        .attr('y', 0 - margin.left)
+        .attr('y', 0 - margin.left + 20)
         .attr('x', 0 - (height / 2))
         .attr('dy', '1em')
         .style('text-anchor', 'middle')
-        .text('Average per Match');
+        .text('Points Gap');
 
-    // Line for fouls
-    const foulLine = d3.line()
+    // Line generators
+    const createLine = key => d3.line()
+        .defined(d => d[key] !== null)
         .x(d => x(d.season))
-        .y(d => y(d.avgFouls));
+        .y(d => y(d[key]));
 
+    const topFourLine = createLine('topFourGap');
+    const championsLeagueLine = createLine('championsLeagueCutoff');
+    const relegationLine = createLine('relegationBattle');
+
+    // Add the lines
     svg.append('path')
         .datum(chartData)
         .attr('fill', 'none')
         .attr('stroke', 'blue')
-        .attr('stroke-width', 1.5)
-        .attr('d', foulLine);
-
-    // Line for yellow cards (multiplied by 10 for scale)
-    const yellowCardLine = d3.line()
-        .x(d => x(d.season))
-        .y(d => y(d.avgYellowCards * 10));
+        .attr('stroke-width', 2)
+        .attr('d', topFourLine);
 
     svg.append('path')
         .datum(chartData)
         .attr('fill', 'none')
-        .attr('stroke', 'yellow')
-        .attr('stroke-width', 1.5)
-        .attr('d', yellowCardLine);
-
-    // Line for red cards (multiplied by 100 for scale)
-    const redCardLine = d3.line()
-        .x(d => x(d.season))
-        .y(d => y(d.avgRedCards * 100));
+        .attr('stroke', 'green')
+        .attr('stroke-width', 2)
+        .attr('d', championsLeagueLine);
 
     svg.append('path')
         .datum(chartData)
         .attr('fill', 'none')
         .attr('stroke', 'red')
-        .attr('stroke-width', 1.5)
-        .attr('d', redCardLine);
+        .attr('stroke-width', 2)
+        .attr('d', relegationLine);
 
     // Add legend
-    svg.append('circle').attr('cx', width + 20).attr('cy', 20).attr('r', 6).style('fill', 'blue');
-    svg.append('circle').attr('cx', width + 20).attr('cy', 50).attr('r', 6).style('fill', 'yellow');
-    svg.append('circle').attr('cx', width + 20).attr('cy', 80).attr('r', 6).style('fill', 'red');
-    svg.append('text').attr('x', width + 30).attr('y', 20).text('Fouls').style('font-size', '15px').attr('alignment-baseline', 'middle');
-    svg.append('text').attr('x', width + 30).attr('y', 50).text('Yellow Cards (x10)').style('font-size', '15px').attr('alignment-baseline', 'middle');
-    svg.append('text').attr('x', width + 30).attr('y', 80).text('Red Cards (x100)').style('font-size', '15px').attr('alignment-baseline', 'middle');
+    const legend = svg.append('g')
+        .attr('transform', `translate(${width + 10}, 10)`);
+
+    const legendItems = [
+        { color: 'blue', text: 'Title Race Gap', description: '(1st - 4th)' },
+        { color: 'green', text: 'Champions League Cutoff', description: '(4th - 5th)' },
+        { color: 'red', text: 'Relegation Battle', description: '(17th - 18th)' }
+    ];
+
+    legendItems.forEach((item, i) => {
+        const legendItem = legend.append('g')
+            .attr('transform', `translate(0, ${i * 60})`);
+        
+        legendItem.append('line')
+            .attr('x1', 0)
+            .attr('x2', 20)
+            .attr('y1', 0)
+            .attr('y2', 0)
+            .style('stroke', item.color)
+            .style('stroke-width', 2);
+        
+        legendItem.append('text')
+            .attr('x', 25)
+            .attr('y', 0)
+            .text(item.text)
+            .style('font-size', '12px')
+            .attr('alignment-baseline', 'middle')
+            .style('font-weight', 'bold');
+        
+        legendItem.append('text')
+            .attr('x', 25)
+            .attr('y', 20)
+            .text(item.description)
+            .style('font-size', '10px')
+            .attr('alignment-baseline', 'middle');
+    });
+
+    // Add tooltips
+    const tooltip = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
+
+    // Function to handle mouseover for all data points
+    function handleMouseOver(event, d) {
+        tooltip.transition()
+            .duration(200)
+            .style("opacity", .9);
+        tooltip.html(`Season: ${d.season}<br>
+                      Title Race Gap: ${d.topFourGap} points<br>
+                      Champions League Cutoff: ${d.championsLeagueCutoff} points<br>
+                      Relegation Battle: ${d.relegationBattle} points`)
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 28) + "px");
+    }
+
+    // Function to handle mouseout
+    function handleMouseOut() {
+        tooltip.transition()
+            .duration(500)
+            .style("opacity", 0);
+    }
+
+    // Add dots and hover effects for each line
+    ['topFourGap', 'championsLeagueCutoff', 'relegationBattle'].forEach((key, i) => {
+        svg.selectAll(`.dot-${key}`)
+            .data(chartData.filter(d => d[key] !== null))
+            .enter().append('circle')
+            .attr('class', `dot-${key}`)
+            .attr('cx', d => x(d.season))
+            .attr('cy', d => y(d[key]))
+            .attr('r', 4)
+            .attr('fill', ['blue', 'green', 'red'][i])
+            .on('mouseover', handleMouseOver)
+            .on('mouseout', handleMouseOut);
+    });
 
     // Add explanation text
     container.append('p')
-        .html('This chart illustrates how the pace and style of play in the Premier League have evolved over time. ' +
-              'We track three key metrics: average fouls, yellow cards, and red cards per match for each season. <br><br>' +
-              'Note that yellow cards are multiplied by 10 and red cards by 100 to fit on the same scale as fouls. ' +
-              'Changes in these metrics can indicate shifts in playing style, refereeing standards, or rule changes. <br><br>' +
-              'For example, a decrease in fouls might suggest a more flowing, less physical game, while changes in card rates ' +
-              'could reflect stricter or more lenient refereeing.')
-        .style('max-width', '600px')
-        .style('margin', '20px auto');
-
-    // Add interactive tooltips
-    const tooltip = container.append('div')
-        .attr('class', 'tooltip')
-        .style('opacity', 0)
-        .style('position', 'absolute')
-        .style('background-color', 'white')
-        .style('border', 'solid')
-        .style('border-width', '1px')
-        .style('border-radius', '5px')
-        .style('padding', '10px');
-
-    const mouseover = function(event, d) {
-        tooltip.style('opacity', 1);
-    }
-
-    const mousemove = function(event, d) {
-        tooltip.html(`Season: ${d.season}<br>Fouls: ${d.avgFouls.toFixed(2)}<br>Yellow Cards: ${d.avgYellowCards.toFixed(2)}<br>Red Cards: ${d.avgRedCards.toFixed(2)}`)
-            .style('left', (event.pageX + 10) + 'px')
-            .style('top', (event.pageY - 10) + 'px');
-    }
-
-    const mouseleave = function(event, d) {
-        tooltip.style('opacity', 0);
-    }
-
-    svg.selectAll('myCircles')
-        .data(chartData)
-        .enter()
-        .append('circle')
-            .attr('fill', 'grey')
-            .attr('stroke', 'none')
-            .attr('cx', d => x(d.season))
-            .attr('cy', d => y(d.avgFouls))
-            .attr('r', 3)
-            .on('mouseover', mouseover)
-            .on('mousemove', mousemove)
-            .on('mouseleave', mouseleave);
+        .html(`
+            <strong>Understanding the Competitiveness of the Premier League</strong><br><br>
+            This chart illustrates how the competitive landscape of the Premier League has evolved over time by tracking three key point gaps:<br><br>
+            <span style="color: blue;"><strong>1. Title Race Gap (blue):</strong></span> The point difference between 1st and 4th place. A smaller gap indicates a tighter race for the title and top positions.<br><br>
+            <span style="color: green;"><strong>2. Champions League Cutoff (green):</strong></span> The point difference between 4th and 5th place. This shows how fierce the competition is for the final Champions League spot.<br><br>
+            <span style="color: red;"><strong>3. Relegation Battle (red):</strong></span> The point difference between 17th (safety) and 18th (relegation). A smaller gap suggests a more intense fight to avoid relegation.<br><br>
+            <strong>Interpreting the Trends:</strong><br>
+            - Decreasing gaps suggest increased competitiveness in that area of the league.<br>
+            - Increasing gaps indicate a widening performance divide.<br>
+            - Sharp changes might reflect shifts in team strategies, financial disparities, or league policies.<br><br>
+            Hover over the data points to see exact values for each season.
+        `)
+        .style('max-width', '700px')
+        .style('margin', '20px auto')
+        .style('line-height', '1.4');
 }
 
 function renderConclusionScene(container) {
