@@ -391,13 +391,15 @@ function renderGoalsScene(container) {
                 .style("opacity", 0);
         });
 
-    // Add explanation text
     container.append('p')
-        .html('This chart shows the average number of goals scored per match in each Premier League season. ' +
-              'We can observe how goal-scoring trends have changed over time, with some seasons seeing higher ' +
-              'average goal counts than others.')
-        .style('max-width', '600px')
-        .style('margin', '20px auto');
+    .html('This chart depicts the evolution of goal-scoring in the Premier League from 1994 to 2023. ' +
+          'The average goals per match have fluctuated over the years, ranging from a low of 2.45 in 2007 ' +
+          'to a high of 2.85 in 2023. There\'s a general upward trend in goal-scoring, particularly since 2007, ' +
+          'with a noticeable increase since 2016. These trends could reflect changes in tactical approaches, ' +
+          'player skills, rule modifications, or a shift towards more attack-minded football. Consider how these ' +
+          'changes have impacted the overall spectacle of Premier League matches.')
+    .style('max-width', '600px')
+    .style('margin', '20px auto');
 }
 
 function renderHomeAwayScene(container) {
@@ -570,14 +572,16 @@ function renderHomeAwayScene(container) {
                 .style("opacity", 0);
         });
 
-    // Add explanation text
     container.append('p')
-        .html('This chart shows the changing dynamics of home advantage in the Premier League. ' +
-              'The blue line represents the percentage of home wins, while the red line shows away wins. ' +
-              'We can observe how the gap between home and away performance has changed over time, ' +
-              'with the smallest gap occurring in the highlighted season.')
-        .style('max-width', '600px')
-        .style('margin', '20px auto');
+    .html('This chart illustrates the changing dynamics of home advantage in the Premier League from 1994 to 2023. ' +
+          'Home win percentages (blue line) have consistently remained higher than away win percentages (red line), ' +
+          'but the gap has narrowed over time. The smallest difference occurred in 2021, likely influenced by matches ' +
+          'played without spectators due to COVID-19 restrictions. This trend suggests a gradual reduction in home ' +
+          'advantage, which could be attributed to factors such as improved away team strategies, better travel ' +
+          'conditions, or changes in refereeing practices. The data invites viewers to consider how the nature of ' +
+          'home advantage in football has evolved over the past three decades.')
+    .style('max-width', '600px')
+    .style('margin', '20px auto');
 }
 
 function renderCompetitiveBalanceScene(container) {
@@ -710,16 +714,16 @@ function renderCompetitiveBalanceScene(container) {
                 .style("opacity", 0);
         });
 
-    // Add explanation text
-    container.append('p')
-        .html('This chart shows the standard deviation of points across teams for each Premier League season. ' +
-              'A lower standard deviation indicates a more competitive season, where teams\' performances were closer together. ' +
-              'A higher standard deviation suggests a season with a wider gap between top and bottom teams. <br><br>' +
-              'We can observe how the competitiveness of the league has changed over time. ' +
-              'The most competitive season (with the lowest standard deviation) and the least competitive season ' +
-              'are highlighted, inviting consideration of what factors might have influenced these changes in competitive balance.')
-        .style('max-width', '600px')
-        .style('margin', '20px auto');
+   container.append('p')
+    .html('This chart illustrates the changing competitive balance in the Premier League from 1993 to 2023, using the standard deviation of points across teams each season.' +
+         ' A lower standard deviation indicates a more competitive season with teams performing closer together, while a higher value suggests a wider gap between top and bottom teams.' + 
+        ' The league was most competitive in its second season (1993) with a standard deviation of 10.37, while the 2018-2019 season was the least' +
+        ' competitive with a standard deviation of 21.31. The overall trend shows a general increase in the standard deviation, suggesting' +
+        ' a gradual decrease in competitive balance over time. This could be due to factors such as increasing financial disparities between clubs,' + 
+        ' the establishment of "big six" teams, or the impact of European competition on domestic performance. The fluctuations invite viewers to' +
+        ' consider how various factors have influenced the league\'s competitiveness over the years.')
+    .style('max-width', '600px')
+    .style('margin', '20px auto');
 }
 
 function renderPlayerImpactScene(container) {
@@ -869,16 +873,17 @@ function renderPlayerImpactScene(container) {
                 .style("opacity", 0);
         });
 
-    // Add explanation text
     container.append('p')
-        .html('This chart shows the top 10 players in Premier League history based on their combined goals and assists. ' +
-              'These players have had a significant impact on the league, consistently performing at the highest level. ' +
-              'Their goal-scoring prowess and ability to create chances for teammates have not only helped their teams but also entertained millions of fans worldwide. <br><br>' +
-              'It\'s worth noting that this data spans the entire history of the Premier League, so it ' +
-              'favors players with longer careers in the league. Some recent stars might not appear ' +
-              'here if they haven\'t played in the Premier League for many seasons.')
-        .style('max-width', '600px')
-        .style('margin', '20px auto');
+    .html('This chart showcases the top 10 players in Premier League history based on their combined goals and assists. ' +
+          'Alan Shearer leads with 235 total contributions, followed closely by Harry Kane and Thierry Henry. ' +
+          'The data reveals interesting insights:<br><br>' +
+          '• Most players show a balanced mix of goals and assists, with strikers generally having more goals.<br>' +
+          '• Some players, like Wayne Rooney, demonstrate exceptional all-round ability with high numbers in both categories.<br>' +
+          '• The presence of current player Harry Kane in second place highlights his impact on the modern game.<br><br>' +
+          'Note that this data favors players with longer Premier League careers, potentially overlooking recent stars ' +
+          'with shorter tenures but significant impact.')
+    .style('max-width', '600px')
+    .style('margin', '20px auto');
 }
 
 function renderChangingPaceScene(container) {
@@ -906,8 +911,6 @@ function renderChangingPaceScene(container) {
     const chartData = Array.from(pointGaps, ([season, gaps]) => ({season, ...gaps}))
         .sort((a, b) => a.season - b.season)
         .filter(d => d.season >= 1992 && d.season <= 2023);
-
-    console.log('Points Gap Data:', chartData);
 
     const margin = {top: 30, right: 150, bottom: 50, left: 60};
     const width = 700 - margin.left - margin.right;
@@ -1061,37 +1064,31 @@ function renderChangingPaceScene(container) {
             .on('mouseout', handleMouseOut);
     });
 
-    // Add explanation text
     container.append('p')
-        .html(`
-            <strong>Understanding the Competitiveness of the Premier League</strong><br><br>
-            This chart illustrates how the competitive landscape of the Premier League has evolved over time by tracking three key point gaps:<br><br>
-            <span style="color: blue;"><strong>1. Title Race Gap (blue):</strong></span> The point difference between 1st and 4th place. A smaller gap indicates a tighter race for the title and top positions.<br><br>
-            <span style="color: green;"><strong>2. Champions League Cutoff (green):</strong></span> The point difference between 4th and 5th place. This shows how fierce the competition is for the final Champions League spot.<br><br>
-            <span style="color: red;"><strong>3. Relegation Battle (red):</strong></span> The point difference between 17th (safety) and 18th (relegation). A smaller gap suggests a more intense fight to avoid relegation.<br><br>
-            <strong>Interpreting the Trends:</strong><br>
-            - Decreasing gaps suggest increased competitiveness in that area of the league.<br>
-            - Increasing gaps indicate a widening performance divide.<br>
-            - Sharp changes might reflect shifts in team strategies, financial disparities, or league policies.<br><br>
-            Hover over the data points to see exact values for each season.
-        `)
-        .style('max-width', '700px')
-        .style('margin', '20px auto')
-        .style('line-height', '1.4');
+    .html('This chart illustrates the evolution of competitiveness in the Premier League by tracking three key point gaps:<br><br>' +
+          '• <span style="color: blue;">Title Race Gap (blue):</span> Points between 1st and 4th place. Larger spikes indicate dominant seasons by top teams.<br>' +
+          '• <span style="color: green;">Champions League Cutoff (green):</span> Points between 4th and 5th place. Peaks show seasons with fierce competition for European spots.<br>' +
+          '• <span style="color: red;">Relegation Battle (red):</span> Points between 17th and 18th place. Higher values suggest a clear divide between safe and relegated teams.<br><br>' +
+          'The graph reveals fluctuating competitiveness across different areas of the league table over time. ' +
+          'Notable trends include increasing title race gaps in recent years and varying intensity in relegation battles. ' +
+          'These patterns may reflect changes in team strategies, financial disparities, or league policies.')
+    .style('max-width', '700px')
+    .style('margin', '20px auto');
 }
 
 function renderConclusionScene(container) {
     container.append('h3').text('Conclusion: The Modern Premier League');
     
     container.append('p')
-        .html('As we\'ve seen through these visualizations, the Premier League has undergone significant changes since its inception in 1992:<br><br>' +
-              '1. Goal scoring trends have fluctuated, reflecting changes in tactics and player skills.<br>' +
-              '2. The home advantage has generally decreased over time, making away games more competitive.<br>' +
-              '3. The league has seen periods of varying competitive balance, with some seasons being much tighter than others.<br>' +
-              '4. Individual players have left indelible marks on the league with their goal-scoring prowess.<br>' +
-              '5. The pace and style of play have evolved, as reflected in the changing rates of fouls and cards.<br><br>' +
-              'These changes have shaped the Premier League into the dynamic, globally popular competition it is today. ' +
-              'As we look to the future, it will be fascinating to see how these trends continue to evolve.')
-        .style('max-width', '600px')
-        .style('margin', '20px auto');
+    .html('Our journey through the Premier League\'s evolution reveals a competition that has constantly reinvented itself:<br><br>' +
+          '• Goal-scoring has trended upward, peaking in recent seasons, showcasing an increasingly attacking style of play.<br>' +
+          '• Home advantage has diminished, reflecting improved away team strategies and changing stadium dynamics.<br>' +
+          '• Competitive balance has fluctuated, with recent seasons showing a widening gap between top and bottom teams.<br>' +
+          '• Individual brilliance continues to shape the league, with modern players challenging long-standing records.<br>' +
+          '• The battle for key positions (title, Champions League spots, and relegation) has evolved, indicating shifting competitive focuses.<br><br>' +
+          'These trends paint a picture of a league that has become more tactically sophisticated, globally influential, and financially polarized. ' +
+          'As the Premier League moves forward, it faces the challenge of maintaining its competitive spirit while adapting to the modern football landscape. ' +
+          'What new chapters will be written in its ongoing story?')
+    .style('max-width', '700px')
+    .style('margin', '20px auto');
 }
